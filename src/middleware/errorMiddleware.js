@@ -5,10 +5,15 @@ function notFound(_req, res) {
 }
 
 function errorHandler(err, _req, res, _next) {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ message: 'Malformed JSON payload.' });
+  }
+
   const status = err.status || 500;
 
   if (env.nodeEnv !== 'test') {
-    console.error(err);
+    const logPayload = env.nodeEnv === 'production' ? err.message : err;
+    console.error(logPayload);
   }
 
   return res.status(status).json({
