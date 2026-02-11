@@ -3,13 +3,33 @@ const userStore = require('../services/userStore');
 const generateToken = require('../utils/generateToken');
 const env = require('../config/env');
 
+const DUMMY_PASSWORD_HASH = '$2b$12$wce9xD3L4fSgjNQlyum9We4jiA8jzv0VfaA6FO7OQdW6W5j4g/N6K';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function validateRegistrationPayload({ email, password, name }) {
   if (!email || !password || !name) {
     return 'Email, password, and name are required.';
   }
 
-  if (password.length < 8) {
-    return 'Password must be at least 8 characters long.';
+  if (!EMAIL_REGEX.test(email)) {
+    return 'A valid email address is required.';
+  }
+
+  if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
+    return 'Name must be between 2 and 100 characters.';
+  }
+
+  if (typeof password !== 'string' || password.length < 12) {
+    return 'Password must be at least 12 characters long.';
+  }
+
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+  if (!hasUpper || !hasLower || !hasDigit || !hasSymbol) {
+    return 'Password must include uppercase, lowercase, number, and symbol characters.';
   }
 
   return null;
@@ -31,6 +51,10 @@ async function register(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, env.bcryptSaltRounds);
     const user = userStore.createUser({ email, passwordHash, name });
+
+    if (!user) {
+      return res.status(409).json({ message: 'A user with this email already exists.' });
+    }
 
     const token = generateToken(user);
 
@@ -58,12 +82,10 @@ async function login(req, res, next) {
     }
 
     const user = userStore.findByEmail(email);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
-    }
+    const hashToCompare = user ? user.passwordHash : DUMMY_PASSWORD_HASH;
+    const isValidPassword = await bcrypt.compare(password, hashToCompare);
 
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!isValidPassword) {
+    if (!user || !isValidPassword) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 

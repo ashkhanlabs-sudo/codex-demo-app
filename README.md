@@ -5,7 +5,7 @@ A production-ready Express.js backend starter with secure authentication primiti
 - User registration and login routes
 - JWT-based authentication
 - Password hashing with `bcrypt`
-- Rate limiting for auth endpoints
+- Rate limiting for auth and API routes
 - Environment-based configuration with `dotenv`
 - Structured project layout (`routes`, `controllers`, `middleware`, `config`)
 
@@ -57,18 +57,19 @@ npm install
 cp .env.example .env
 ```
 
-4. Update `.env` values, especially `JWT_SECRET`.
+4. Update `.env` values, especially `JWT_SECRET` and `CORS_ORIGIN`.
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `PORT` | No | `3000` | Port for the HTTP server |
-| `NODE_ENV` | No | `development` | Runtime environment |
+| `NODE_ENV` | No | `development` | Runtime environment (`development`, `test`, `production`) |
 | `JWT_SECRET` | Yes | - | Secret key used to sign JWT tokens |
 | `JWT_EXPIRES_IN` | No | `1h` | JWT expiration (e.g. `1h`, `7d`) |
-| `BCRYPT_SALT_ROUNDS` | No | `12` | Cost factor for password hashing |
-| `CORS_ORIGIN` | No | `*` | Allowed CORS origin |
+| `BCRYPT_SALT_ROUNDS` | No | `12` | Cost factor for password hashing (10-15) |
+| `CORS_ORIGIN` | No | `*` in dev only | Allowed CORS origin (must be explicit in production) |
+| `REQUEST_BODY_LIMIT` | No | `10kb` | Max JSON body size |
 
 ## Running the Project
 
@@ -110,9 +111,17 @@ Request body:
 {
   "name": "Jane Doe",
   "email": "jane@example.com",
-  "password": "strongpassword123"
+  "password": "StrongP@ssword123"
 }
 ```
+
+Password requirements:
+
+- Minimum 12 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one symbol
 
 ### Login User
 
@@ -123,7 +132,7 @@ Request body:
 ```json
 {
   "email": "jane@example.com",
-  "password": "strongpassword123"
+  "password": "StrongP@ssword123"
 }
 ```
 
@@ -132,12 +141,16 @@ Request body:
 - `GET /api/auth/me`
 - Header: `Authorization: Bearer <jwt_token>`
 
-## Security Notes
+## Security Hardening Included
 
 - Passwords are hashed with `bcrypt` before storage.
 - JWT tokens are signed and validated using issuer + audience checks.
-- Rate limiting protects auth routes against brute-force attempts.
+- Rate limiting protects both auth endpoints and general API traffic.
+- Failed login attempts are throttled more aggressively than successful logins.
 - `helmet` adds common HTTP security headers.
+- `x-powered-by` is disabled.
+- JSON body size is capped to reduce abuse risk.
+- Invalid JSON payloads return explicit `400` errors.
 
 ## Scripts
 
@@ -147,6 +160,7 @@ Request body:
 ## Next Steps for True Production
 
 - Add a real database (PostgreSQL, MySQL, MongoDB, etc.).
-- Add input schema validation (e.g., Zod/Joi).
+- Add request schema validation (e.g., Zod/Joi) for all routes.
 - Add refresh-token strategy and token revocation.
 - Add automated tests and CI pipeline.
+- Add centralized audit logging + monitoring/alerts.
