@@ -5,8 +5,9 @@ const env = require('../config/env');
 
 const DUMMY_PASSWORD_HASH = '$2b$12$wce9xD3L4fSgjNQlyum9We4jiA8jzv0VfaA6FO7OQdW6W5j4g/N6K';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_ROLES = new Set(['user', 'admin']);
 
-function validateRegistrationPayload({ email, password, name }) {
+function validateRegistrationPayload({ email, password, name, role }) {
   if (!email || !password || !name) {
     return 'Email, password, and name are required.';
   }
@@ -17,6 +18,10 @@ function validateRegistrationPayload({ email, password, name }) {
 
   if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
     return 'Name must be between 2 and 100 characters.';
+  }
+
+  if (role && !ALLOWED_ROLES.has(role)) {
+    return "Role must be either 'user' or 'admin'.";
   }
 
   if (typeof password !== 'string' || password.length < 12) {
@@ -37,9 +42,9 @@ function validateRegistrationPayload({ email, password, name }) {
 
 async function register(req, res, next) {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, role } = req.body;
 
-    const validationError = validateRegistrationPayload({ email, password, name });
+    const validationError = validateRegistrationPayload({ email, password, name, role });
     if (validationError) {
       return res.status(400).json({ message: validationError });
     }
@@ -50,7 +55,7 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, env.bcryptSaltRounds);
-    const user = userStore.createUser({ email, passwordHash, name });
+    const user = userStore.createUser({ email, passwordHash, name, role: role || 'user' });
 
     if (!user) {
       return res.status(409).json({ message: 'A user with this email already exists.' });
@@ -65,6 +70,7 @@ async function register(req, res, next) {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt,
       },
     });
@@ -98,6 +104,7 @@ async function login(req, res, next) {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -111,8 +118,16 @@ function me(req, res) {
   });
 }
 
+function adminOnlyExample(req, res) {
+  return res.status(200).json({
+    message: `Hello ${req.user.name}, you have admin access.`,
+    user: req.user,
+  });
+}
+
 module.exports = {
   register,
   login,
   me,
+  adminOnlyExample,
 };

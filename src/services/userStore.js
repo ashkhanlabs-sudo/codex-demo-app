@@ -10,7 +10,7 @@ function normalizeEmail(email) {
   return email.trim().toLowerCase();
 }
 
-function createUser({ email, passwordHash, name }) {
+function createUser({ email, passwordHash, name, role = 'user' }) {
   const normalizedEmail = normalizeEmail(email);
 
   if (!normalizedEmail || users.has(normalizedEmail)) {
@@ -22,6 +22,7 @@ function createUser({ email, passwordHash, name }) {
     email: normalizedEmail,
     passwordHash,
     name: typeof name === 'string' ? name.trim() : '',
+    role,
     createdAt: new Date().toISOString(),
   };
 

@@ -4,6 +4,7 @@ A production-ready Express.js backend starter with secure authentication primiti
 
 - User registration and login routes
 - JWT-based authentication
+- Role-based access control (RBAC) middleware
 - Password hashing with `bcrypt`
 - Rate limiting for auth and API routes
 - Environment-based configuration with `dotenv`
@@ -111,9 +112,15 @@ Request body:
 {
   "name": "Jane Doe",
   "email": "jane@example.com",
-  "password": "StrongP@ssword123"
+  "password": "StrongP@ssword123",
+  "role": "user"
 }
 ```
+
+Optional role values:
+
+- `user` (default)
+- `admin`
 
 Password requirements:
 
@@ -140,6 +147,27 @@ Request body:
 
 - `GET /api/auth/me`
 - Header: `Authorization: Bearer <jwt_token>`
+
+### Admin-only Route Example
+
+- `GET /api/auth/admin`
+- Headers:
+  - `Authorization: Bearer <jwt_token>`
+- Requirement: authenticated user with `role: "admin"`
+
+Response:
+
+```json
+{
+  "message": "Hello Jane Doe, you have admin access.",
+  "user": {
+    "id": "...",
+    "email": "jane@example.com",
+    "name": "Jane Doe",
+    "role": "admin"
+  }
+}
+```
 
 ## Security Hardening Included
 
